@@ -27,7 +27,7 @@ namespace Hearthrock
         public void SwitchMode(int mode)
         {
             // do a simple map
-            GameMode = (HEARTHROCK_GAMEMODE) mode;
+            GameMode = (HEARTHROCK_GAMEMODE)mode;
         }
 
         /// <summary>
@@ -211,21 +211,12 @@ namespace Hearthrock
         {
             GameState state = GameState.Get();
             if (state == null) return;
-            
-            if (state.IsBlockingServer())
-            {
-                HoldBack(750);
-                Log("BlockingServer");
-            }
-                /*
-            else if (state.IsMulliganPhase())
-            {
-                OnRockMulligan();
-                TurnReady = false;
-            }
-                 * */
-            
-            else if (state.IsMulliganPhase())
+
+
+            HoldBack(750);
+
+ 
+            if (state.IsMulliganPhase())
             {
                 OnRockMulligan();
                 TurnReady = false;
@@ -326,12 +317,13 @@ namespace Hearthrock
                 catch { }
             }
         }
-        
+
         RockAction ActionRocking = null;
         private void OnAction(RockAction action)
         {
             System.Random r = new System.Random();
-            
+
+            HoldBack(r.Next(500, 1000));
             if (action.step == 0)
             {
                 int delay = r.Next(400, 600);
@@ -348,8 +340,6 @@ namespace Hearthrock
                 */
 
                 //bool x = GameState.Get().HasResponse(action.card1.GetEntity());
-                
-
                 HearthstoneClickCard(action.card1);
                 action.step = 1;
             }
@@ -367,30 +357,54 @@ namespace Hearthrock
                     input_mgr.DropHeldCard();
                     //MethodInfo dynMethod = input_mgr.GetType().GetMethod("DropHeldCard", BindingFlags.NonPublic | BindingFlags.Instance, null, new Type[] { }, null);
                     //dynMethod.Invoke(input_mgr, new object[] { });
+                    HoldBack(500);
                     action.step = 2;
+                    if (action.card1.GetEntity().HasBattlecry() || action.card1.GetEntity().IsSpell())
+                    {
+
+                        if (GameState.Get().IsInTargetMode())
+                        {
+                            List<Card> randomCardList;
+                            if (action.card1.GetEntity().HasBattlecry())
+                            {
+                                randomCardList = HearthrockRobot.getMyValidOptionTargetList();
+                                if (randomCardList.Count == 0)
+                                {
+                                    randomCardList = HearthrockRobot.getOpponentPlayerValidOptionTargetList();
+                                }
+                            }
+                            else
+                            {
+                                randomCardList = HearthrockRobot.getOpponentPlayerValidOptionTargetList();
+                            }
+                            string message = "targetList is : ";
+                            foreach (Card card in randomCardList)
+                            {
+                                message += card.GetEntity().GetName() + " ";
+                            }
+                            Log(message);
+                            if (randomCardList.Count > 0)
+                            {
+                                Random rnd = new Random();
+                                int index = rnd.Next(0, randomCardList.Count);
+                                HandleClickOnCardInBattlefield(randomCardList[index].GetEntity());
+                            }
+                        }
+
+                    }
                 }
                 else if (action.type == HEARTHROCK_ACTIONTYPE.ATTACK)
                 {
                     HearthstoneClickCard(action.card2);
                     action.step = -1;
                 }
+
+
             }
             else if (action.step == 2)
             {
                 action.step = -1;
                 return;
-                // maybe can do sth to deal with card with spell
-                if (InputManager.Get().heldObject == null)
-                {
-                    action.step = -1;
-                    return;
-                }
-                int delay = r.Next(300, 600);
-                HoldBack(delay);
-                if (action.type == HEARTHROCK_ACTIONTYPE.PLAY)
-                {
-                    action.step = -1;
-                }
             }
         }
 
@@ -401,6 +415,7 @@ namespace Hearthrock
         {
             if (OnRocking) return;
             OnRocking = true;
+
 
             try
             {
@@ -432,10 +447,11 @@ namespace Hearthrock
                 }
 
                 RockAction action = HearthrockRobot.RockIt();
+
                 if (action.type == HEARTHROCK_ACTIONTYPE.PLAY)
                 {
                     SingletonEndTurn = false;
-                    Notify("Play: " + action.card1.GetEntity().GetName());
+                    Notify("Play: " + action.card1.GetEntity().GetName() + "=>" + action.card1.GetEntity().GetCardId());
                     ActionRocking = action;
                 }
                 else if (action.type == HEARTHROCK_ACTIONTYPE.ATTACK)
@@ -449,9 +465,10 @@ namespace Hearthrock
                     OnRockTurnEnd();
                 }
 
-                
+
             }
-            catch (Exception e){
+            catch (Exception e)
+            {
                 Log("OnRockAI ex " + e.ToString());
             }
             finally
@@ -477,7 +494,7 @@ namespace Hearthrock
                 HoldBack(500);
                 return;
             }
-            
+
             if (MulliganState <= 0)
             {
                 Notify("Mulligan");
@@ -549,22 +566,28 @@ namespace Hearthrock
             long selectedDeckID = DeckPickerTrayDisplay.Get().GetSelectedDeckID();
 
 
-            Network.TrackWhat what;
+            //        Network.TrackWhat what;
+            //          Network.
+
+
             PegasusShared.GameType type;
             if (ranked)
             {
-                what = Network.TrackWhat.TRACK_PLAY_TOURNAMENT_WITH_CUSTOM_DECK;
+                //              what = Network.TrackWhat.TRACK_PLAY_TOURNAMENT_WITH_CUSTOM_DECK;
                 type = PegasusShared.GameType.GT_RANKED;
             }
             else
             {
-                what = Network.TrackWhat.TRACK_PLAY_CASUAL_WITH_CUSTOM_DECK;
-                type = PegasusShared.GameType.GT_UNRANKED;
+                //                what = Network.TrackWhat.TRACK_PLAY_CASUAL_WITH_CUSTOM_DECK;
+                //  type = PegasusShared.GameType.GT_UNRANKED;
+                type = PegasusShared.GameType.GT_CASUAL;
             }
-            Network.TrackClient(Network.TrackLevel.LEVEL_INFO, what);
+            //      Network.TrackClient(Network.TrackLevel.LEVEL_INFO, what);
+
 
 
             GameMgr.Get().FindGame(type, 2, selectedDeckID, 0L);
+
 
             Enum[] args = new Enum[] { PresenceStatus.PLAY_QUEUE };
             PresenceMgr.Get().SetStatus(args);
@@ -624,7 +647,13 @@ namespace Hearthrock
         {
             InputManager input = InputManager.Get();
             MethodInfo method = input.GetType().GetMethod("HandleClickOnCard", BindingFlags.NonPublic | BindingFlags.Instance);
-            method.Invoke(input, new object[] { card.gameObject , true});
+            method.Invoke(input, new object[] { card.gameObject, true });
+        }
+        public static void HandleClickOnCardInBattlefield(Entity e)
+        {
+            InputManager input = InputManager.Get();
+            MethodInfo method = input.GetType().GetMethod("HandleClickOnCardInBattlefield", BindingFlags.NonPublic | BindingFlags.Instance);
+            method.Invoke(input, new object[] { e });
         }
     }
 }

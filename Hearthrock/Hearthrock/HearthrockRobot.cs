@@ -21,6 +21,9 @@ namespace Hearthrock
         }
 
         public static bool IsEnimyDangerous(Entity enimy) {
+            if (enimy.GetATK() > 4) {
+                return true;
+            }
             if (enimy.GetHealth() > 4)
             {
                 if (enimy.GetATK() - enimy.GetHealth() > 4)
@@ -46,17 +49,109 @@ namespace Hearthrock
             return false;
         }
 
+        public static Card getRandomBattlecryCard()
+        {
+
+            Player player = GameState.Get().GetFriendlySidePlayer();
+            Player player_enemy = GameState.Get().GetFirstOpponentPlayer(GameState.Get().GetFriendlySidePlayer());
+            List<Card> minions = player.GetBattlefieldZone().GetCards();
+            List<Card> minions_enemy = player_enemy.GetBattlefieldZone().GetCards();
+            List<Card> randomCardList = new List<Card>();
+            foreach (Card card in minions) {
+                if (card.GetEntity().CanBeTargetedByAbilities()) { 
+                    randomCardList.Add(card);
+                }
+            }
+            foreach (Card card in minions_enemy) {
+                if (card.GetEntity().CanBeTargetedByAbilities()) { 
+                    randomCardList.Add(card);
+                }
+            }
+            string message = "affect by battlecry: ";
+
+            foreach (Card card in randomCardList) {
+                message += card.GetEntity().GetName() + " ";
+            }
+            Console.WriteLine(DateTime.Now + ": " + message);
+
+            Random rnd = new Random();
+            int index = rnd.Next(0, randomCardList.Count);
+            return randomCardList[0];
+        }
+        public static Card getFirstBattlefieldCard()
+        {
+            Player player = GameState.Get().GetFriendlySidePlayer();
+            Player player_enemy = GameState.Get().GetFirstOpponentPlayer(GameState.Get().GetFriendlySidePlayer());
+            List<Card> minions = player.GetBattlefieldZone().GetCards();
+            List<Card> minions_enemy = player_enemy.GetBattlefieldZone().GetCards();
+            List<Card> randomCardList = new List<Card>();
+            foreach (Card card in minions)
+            {
+                randomCardList.Add(card);
+            }
+            foreach (Card card in minions_enemy)
+            {
+                randomCardList.Add(card);
+            }
+            if (randomCardList.Count > 0)
+                return randomCardList[0];
+            return null;
+        }
+
+        public static List<Card> getMyValidOptionTargetList()
+        {
+            List<Card> validCardList = new List<Card>();
+            Player player = GameState.Get().GetFriendlySidePlayer();
+            List<Card> minions = player.GetBattlefieldZone().GetCards();
+            foreach (Card card in minions)
+            {
+                if (GameState.Get().IsValidOptionTarget(card.GetEntity()))
+                    validCardList.Add(card);
+            }
+            if (GameState.Get().IsValidOptionTarget(player.GetHeroCard().GetEntity()))
+                validCardList.Add(player.GetHeroCard());
+            return validCardList;
+        }
+
+        public static List<Card> getOpponentPlayerValidOptionTargetList()
+        {
+            List<Card> validCardList = new List<Card>();
+            Player player_enemy = GameState.Get().GetFirstOpponentPlayer(GameState.Get().GetFriendlySidePlayer());
+            List<Card> minions_enemy = player_enemy.GetBattlefieldZone().GetCards();
+            foreach (Card card in minions_enemy)
+            {
+                if (GameState.Get().IsValidOptionTarget(card.GetEntity()))
+                    validCardList.Add(card);
+            }
+            if (GameState.Get().IsValidOptionTarget(player_enemy.GetHeroCard().GetEntity()))
+                validCardList.Add(player_enemy.GetHeroCard());
+            return validCardList;
+        }
+
+
+
         public static RockAction RockIt()
         {
             RockAction action = new RockAction();
-
             Player player = GameState.Get().GetFriendlySidePlayer();
             Player player_enemy = GameState.Get().GetFirstOpponentPlayer(GameState.Get().GetFriendlySidePlayer());
             Card hero = player.GetHeroCard();
             Card hero_enemy = player_enemy.GetHeroCard();
+
             int resource = player.GetNumAvailableResources();
+            
+            List<Card> curSecretCardList = player.GetSecretZone().GetCards();
+
+
 
             List<Card> crads = player.GetHandZone().GetCards();
+            foreach (Card card in crads)
+            {
+                HearthrockEngine.Log(card.GetEntity().GetName() + " :=: " + card.GetEntity().GetCardId()); 
+            }
+
+
+           
             List<Card> minions = player.GetBattlefieldZone().GetCards();
             List<Card> minions_enemy = player_enemy.GetBattlefieldZone().GetCards();
             Card heropower = player.GetHeroPowerCard();
@@ -69,9 +164,14 @@ namespace Hearthrock
             List<Card> minion_attacker = new List<Card>();
 
 
+
             int attack_count_enemy = 0;
             foreach (Card minion_enemy in minions_enemy)
             {
+                if (!minion_enemy.GetEntity().CanAttack())
+                {
+                    continue;
+                }
                 attack_count_enemy += minion_enemy.GetEntity().GetATK();
                 if (minion_enemy.GetEntity().HasWindfury())
                 {
@@ -79,6 +179,40 @@ namespace Hearthrock
                 }
             }
             attack_count_enemy += hero_enemy.GetEntity().GetATK();
+
+
+            int my_army_attack_count = 0;
+
+            foreach (Card card in minions)
+            {
+                if (isActive(card)) {
+                    my_army_attack_count += card.GetEntity().GetATK();
+                }
+            }
+            int player_enemy_defense = 0;
+            foreach (Card card_oppo in minions_enemy)
+            {
+                if (card_oppo.GetEntity().CanBeAttacked() && !card_oppo.GetEntity().IsStealthed())
+                {
+                    if (card_oppo.GetEntity().HasTaunt())
+                    {
+                        player_enemy_defense += card_oppo.GetEntity().GetRemainingHealth(); 
+                    }
+         
+                }
+            }
+
+            string killMessage = " enemy health: " + hero_enemy.GetEntity().GetRemainingHealth().ToString();
+            killMessage += " enemy mionion defense: " + player_enemy_defense.ToString();
+            killMessage += " my total attack : " + my_army_attack_count.ToString();
+
+            
+            bool canKill = (hero_enemy.GetEntity().GetRemainingHealth() + player_enemy_defense < my_army_attack_count);
+
+
+            killMessage += " canKill: " + canKill.ToString();
+            HearthrockEngine.Log(killMessage);
+
 
             foreach (Card card_oppo in minions_enemy)
             {
@@ -90,7 +224,8 @@ namespace Hearthrock
                     }
                     else if (IsEnimyDangerous(card_oppo.GetEntity()))
                     {
-                        minion_dangerous_enemy.Add(card_oppo);
+                        if (!canKill)
+                            minion_dangerous_enemy.Add(card_oppo);
                     }
                 }
             }
@@ -174,12 +309,75 @@ namespace Hearthrock
                 {
                     continue;
                 }
-                if (card.GetEntity().IsSpell() || card.GetEntity().IsWeapon())
+
+
+
+                //if (card.GetEntity().IsSpell() || card.GetEntity().IsWeapon())
+                //{
+                //    action.type = HEARTHROCK_ACTIONTYPE.PLAY;
+                //    action.card1 = card;
+                //    return action;
+                //}
+
+                // play 动物伙伴
+
+                if (card.GetEntity().GetCardId() == "NEW1_031")
                 {
                     action.type = HEARTHROCK_ACTIONTYPE.PLAY;
                     action.card1 = card;
                     return action;
                 }
+                if (card.GetEntity().GetCardId() == "OG_211") { 
+                    action.type = HEARTHROCK_ACTIONTYPE.PLAY;
+                    action.card1 = card;
+                    return action;
+                }
+                if (card.GetEntity().HasBattlecry())
+                {
+                    action.type = HEARTHROCK_ACTIONTYPE.PLAY;
+                    action.card1 = card;
+                    return action;
+                }
+                //if (card.GetEntity().IsSpell()) {
+                //    action.type = HEARTHROCK_ACTIONTYPE.PLAY;
+                //    action.card1 = card;
+                //    return action;
+                //}
+
+                if (player.GetWeaponCard() == null)
+                {
+                    // 鹰角弓
+                    if (card.GetEntity().GetCardId() == "EX1_536")
+                    {
+                        action.type = HEARTHROCK_ACTIONTYPE.PLAY;
+                        action.card1 = card;
+                        return action;
+                    }
+                }
+                // 关门放狗
+                if (card.GetEntity().GetCardId() == "EX1_538")
+                {
+                    if (minions_enemy.Count > 0) {
+                        action.type = HEARTHROCK_ACTIONTYPE.PLAY;
+                        action.card1 = card;
+                        return action; 
+                    }  
+                }
+                // 快速射击
+                if (card.GetEntity().GetCardId() == "BRM_013")
+                {
+                    action.type = HEARTHROCK_ACTIONTYPE.PLAY;
+                    action.card1 = card;
+                    return action;  
+                }
+                // 杀戮命令
+                if (card.GetEntity().GetCardId() == "EX1_539")
+                {
+                    action.type = HEARTHROCK_ACTIONTYPE.PLAY;
+                    action.card1 = card;
+                    return action;
+                }
+
             }
 
             // find a minion which can use all resource
@@ -194,9 +392,8 @@ namespace Hearthrock
                     action.type = HEARTHROCK_ACTIONTYPE.PLAY;
                     action.card1 = card;
                     return action;
-                }
+                } 
             }
-
             // find a minion which can use all resource
             foreach (Card card in crads)
             {
@@ -221,7 +418,34 @@ namespace Hearthrock
                     }
                 }
             }
+           // play 奥秘
+            foreach (Card card in crads)
+            {
+                if (resource < card.GetEntity().GetCost())
+                {
+                    continue;
+                }
+     
 
+                if (card.GetEntity().IsSecret())
+                {
+                    bool tmpCheck = false;
+                    foreach (Card secretCard in player.GetSecretZone().GetCards())
+                    {
+                        if (secretCard.GetEntity().GetCardId().Equals(card.GetEntity().GetCardId()))
+                        {
+                            tmpCheck = true;
+                            break;
+                        }
+                    }
+                    if (!tmpCheck)
+                    {
+                        action.type = HEARTHROCK_ACTIONTYPE.PLAY;
+                        action.card1 = card;
+                        return action;
+                    }
+                }
+            }
 
             // begin attack
             { // deal with his taunts
@@ -376,7 +600,9 @@ namespace Hearthrock
             {
                 HearthrockEngine.Log("HasWeapon CanAttack " + player.GetWeaponCard().GetEntity().CanAttack());
             }
-            if (minion_taunts_enemy.Count == 0 && player.HasWeapon() && player.GetWeaponCard().GetEntity().CanAttack())
+            if (minion_taunts_enemy.Count == 0 && player.HasWeapon() && player.GetWeaponCard().GetEntity().CanAttack()
+                && !player.GetWeaponCard().GetEntity().IsFrozen() && !player.GetWeaponCard().GetEntity().IsExhausted()
+                && !player.GetWeaponCard().GetEntity().IsAsleep())
             {
                 action.type = HEARTHROCK_ACTIONTYPE.ATTACK;
                 action.card1 = player.GetWeaponCard();
@@ -386,7 +612,7 @@ namespace Hearthrock
 
 
             Entity me = player.GetHeroCard().GetEntity();
-            if (minion_taunts_enemy.Count == 0 && me.CanAttack() && me.GetATK() > 0)
+            if (minion_taunts_enemy.Count == 0 && me.CanAttack() && me.GetATK() > 0 && !me.IsFrozen() && !me.IsExhausted() && !me.IsAsleep())
             {
                 action.type = HEARTHROCK_ACTIONTYPE.ATTACK;
                 action.card1 = player.GetHeroCard();
@@ -406,15 +632,15 @@ namespace Hearthrock
                         {
                             return action;
                         }
-                        if (hero.GetEntity().GetRemainingHP() < 5)
+                        if (hero.GetEntity().GetRemainingHealth() < 5)
                         {
                             return action;
                         }
-                        else if (hero.GetEntity().GetRemainingHP() < 12)
+                        else if (hero.GetEntity().GetRemainingHealth() < 12)
                         {
 
 
-                            if (attack_count_enemy + 2 > hero.GetEntity().GetRemainingHP())
+                            if (attack_count_enemy + 2 > hero.GetEntity().GetRemainingHealth())
                             {
                                 return action;
                             }
@@ -470,7 +696,7 @@ namespace Hearthrock
             {
                 foreach (Card card in minion_attacker)
                 {
-                    if (card_oppo.GetEntity().GetRemainingHP() <= card.GetEntity().GetATK())
+                    if (card_oppo.GetEntity().GetRemainingHealth() <= card.GetEntity().GetATK())
                     {
                         if (target_best == null)
                         {
@@ -496,6 +722,12 @@ namespace Hearthrock
                 }
             }
             return null;
+        }
+
+        private static bool isActive(Card card)
+        {
+            Entity e = card.GetEntity();
+            return (!e.IsAsleep()) && (e.CanAttack()) && (e.GetATK() > 0) && (!(e.IsFrozen())) && (!e.IsExhausted());
         }
 
         private static RockAction PlayEmergencyCard(int resource, List<Card> crads, Card hero, Card hero_enemy, int attack_count_enemy)
@@ -538,28 +770,28 @@ namespace Hearthrock
                 }
             }
 
-            // if hero has more health, play as much charge as possible
-            if ((hero.GetEntity().GetHealth() - hero_enemy.GetEntity().GetHealth()) > 10)
-            {
-                foreach (Card card in crads)
-                {
-                    if (resource < card.GetEntity().GetCost())
-                    {
-                        continue;
-                    }
+            //// if hero has more health, play as much charge as possible
+            //if ((hero.GetEntity().GetHealth() - hero_enemy.GetEntity().GetHealth()) > 10)
+            //{
+            //    foreach (Card card in crads)
+            //    {
+            //        if (resource < card.GetEntity().GetCost())
+            //        {
+            //            continue;
+            //        }
 
-                    // waste a cost
-                    if (card.GetEntity().IsMinion() && GameState.Get().GetFriendlySidePlayer().GetBattlefieldZone().GetCards().Count < 7)
-                    {
-                        if (card.GetEntity().HasCharge())
-                        {
-                            action.type = HEARTHROCK_ACTIONTYPE.PLAY;
-                            action.card1 = card;
-                            return action;
-                        }
-                    }
-                }
-            }
+            //        // waste a cost
+            //        if (card.GetEntity().IsMinion() && GameState.Get().GetFriendlySidePlayer().GetBattlefieldZone().GetCards().Count < 7)
+            //        {
+            //            if (card.GetEntity().HasCharge())
+            //            {
+            //                action.type = HEARTHROCK_ACTIONTYPE.PLAY;
+            //                action.card1 = card;
+            //                return action;
+            //            }
+            //        }
+            //    }
+            //}
             return null;
         }
 

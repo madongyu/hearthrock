@@ -21,9 +21,9 @@ namespace Hearthrock
                 {
                     path_hearthstone_managed = @"Hearthstone\Hearthstone_Data\Managed\";
                 }
-                else if (File.Exists(@"C:\Games\Hearthstone\Hearthstone_Data\Managed\Assembly-CSharp.dll"))
+                else if (File.Exists(@"F:\Hearthstone\Hearthstone\Hearthstone_Data\Managed\Assembly-CSharp.dll"))
                 {
-                    path_hearthstone_managed = @"C:\Games\Hearthstone\Hearthstone_Data\Managed\";
+                    path_hearthstone_managed = @"F:\Hearthstone\Hearthstone\Hearthstone_Data\Managed\";
                 }
                 else
                 {
