@@ -586,7 +586,7 @@ namespace Hearthrock
 
 
 
-            GameMgr.Get().FindGame(type, 2, selectedDeckID, 0L);
+            GameMgr.Get().FindGame(type,PegasusShared.FormatType.FT_STANDARD,2, selectedDeckID, 0L);
 
 
             Enum[] args = new Enum[] { PresenceStatus.PLAY_QUEUE };
@@ -639,7 +639,7 @@ namespace Hearthrock
 
             HoldBack(5000);
             ScenarioDbId mission = HearthrockUtils.RandomPracticeMission();
-            GameMgr.Get().FindGame(PegasusShared.GameType.GT_VS_AI, (int)mission, deck, 0L);
+            GameMgr.Get().FindGame(PegasusShared.GameType.GT_VS_AI,PegasusShared.FormatType.FT_STANDARD,(int)mission, deck, 0L);
         }
 
 
