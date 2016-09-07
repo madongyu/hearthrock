@@ -45,7 +45,7 @@ namespace Hearthrock
             return power_x - power_y;
         }
 
-        private int FetchPower(Entity entity)
+        private int FetchPower(Entity entity) 
         {
             int power = entity.GetATK();
             if (entity.HasWindfury())
@@ -53,7 +53,9 @@ namespace Hearthrock
                 power += entity.GetATK();
             }
             //power -= entity.GetRemainingHP();
-            power -= entity.GetRemainingHealth();
+            power -= entity.GetCurrentHealth();
+           
+
 
             if (entity.HasDivineShield())
             {

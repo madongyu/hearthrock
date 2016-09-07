@@ -58,12 +58,12 @@ namespace Hearthrock
             List<Card> minions_enemy = player_enemy.GetBattlefieldZone().GetCards();
             List<Card> randomCardList = new List<Card>();
             foreach (Card card in minions) {
-                if (card.GetEntity().CanBeTargetedByAbilities()) { 
+                if (card.GetEntity().CanBeTargetedByBattlecries()) { 
                     randomCardList.Add(card);
                 }
             }
             foreach (Card card in minions_enemy) {
-                if (card.GetEntity().CanBeTargetedByAbilities()) { 
+                if (card.GetEntity().CanBeTargetedByBattlecries()) { 
                     randomCardList.Add(card);
                 }
             }
@@ -196,18 +196,18 @@ namespace Hearthrock
                 {
                     if (card_oppo.GetEntity().HasTaunt())
                     {
-                        player_enemy_defense += card_oppo.GetEntity().GetRemainingHealth(); 
+                        player_enemy_defense += card_oppo.GetEntity().GetCurrentHealth(); 
                     }
          
                 }
             }
 
-            string killMessage = " enemy health: " + hero_enemy.GetEntity().GetRemainingHealth().ToString();
+            string killMessage = " enemy health: " + hero_enemy.GetEntity().GetCurrentHealth().ToString();
             killMessage += " enemy mionion defense: " + player_enemy_defense.ToString();
             killMessage += " my total attack : " + my_army_attack_count.ToString();
 
             
-            bool canKill = (hero_enemy.GetEntity().GetRemainingHealth() + player_enemy_defense < my_army_attack_count);
+            bool canKill = (hero_enemy.GetEntity().GetCurrentHealth() + player_enemy_defense < my_army_attack_count);
 
 
             killMessage += " canKill: " + canKill.ToString();
@@ -632,15 +632,15 @@ namespace Hearthrock
                         {
                             return action;
                         }
-                        if (hero.GetEntity().GetRemainingHealth() < 5)
+                        if (hero.GetEntity().GetCurrentHealth() < 5)
                         {
                             return action;
                         }
-                        else if (hero.GetEntity().GetRemainingHealth() < 12)
+                        else if (hero.GetEntity().GetCurrentHealth() < 12)
                         {
 
 
-                            if (attack_count_enemy + 2 > hero.GetEntity().GetRemainingHealth())
+                            if (attack_count_enemy + 2 > hero.GetEntity().GetCurrentHealth())
                             {
                                 return action;
                             }
@@ -696,7 +696,7 @@ namespace Hearthrock
             {
                 foreach (Card card in minion_attacker)
                 {
-                    if (card_oppo.GetEntity().GetRemainingHealth() <= card.GetEntity().GetATK())
+                    if (card_oppo.GetEntity().GetCurrentHealth() <= card.GetEntity().GetATK())
                     {
                         if (target_best == null)
                         {
